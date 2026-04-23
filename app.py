@@ -22,7 +22,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-st.title("📊 Professionelles Datenanalyse-Tool")
+st.title(" Professionelles Datenanalyse-Tool")
 st.write("Ein Portfolio-Projekt zur interaktiven Exploration und statistischen Prüfung.")
 
 # ==========================================
@@ -103,7 +103,7 @@ if uploaded_file is not None:
     # ==========================================
     # 4. DAS TAB-SYSTEM (Die Hauptansicht)
     # ==========================================
-    tab1, tab2, tab3, tab4 = st.tabs(["📂 Datenansicht & Export", "🔍 Ausreißer (IQR)", "📈 Korrelationen", "🛡️ Daten-Qualität"])
+    tab1, tab2, tab3, tab4 = st.tabs([" Datenansicht & Export", "🔍 Ausreißer (IQR)", " Korrelationen", " Daten-Qualität"])
 
     # ------------------------------------------
     # TAB 1: DATENANSICHT & EXPORT
@@ -112,13 +112,13 @@ if uploaded_file is not None:
         st.subheader("Interaktive Datenvorschau & Auswahl")
         
         # Zeigt, wie Pandas die hochgeladenen Spalten interpretiert hat (Zahl, Text etc.)
-        with st.expander("ℹ️ Erkannte Spaltentypen"):
+        with st.expander(" Erkannte Spaltentypen"):
             type_df = pd.DataFrame(df.dtypes.astype(str), columns=['Datentyp']).reset_index().rename(columns={'index': 'Spalte'})
             st.dataframe(type_df, use_container_width=True)
 
         # Wenn es eine JSON war, zeige den aufklappbaren Baum an
         if raw_json is not None:
-            with st.expander("🌳 JSON Tree-Ansicht (Hierarchische Navigation)", expanded=True):
+            with st.expander(" JSON Tree-Ansicht (Hierarchische Navigation)", expanded=True):
                 st.json(raw_json)
                 
         st.write(f"Angezeigt: {filtered_df.shape[0]} von {df.shape[0]} Zeilen.")
@@ -147,9 +147,9 @@ if uploaded_file is not None:
 
         # Download-Buttons nebeneinander anordnen
         col_ex1, col_ex2, col_ex3, col_ex4 = st.columns(4)
-        with col_ex1: st.download_button("📥 CSV Export", data=csv_data, file_name='daten.csv', mime='text/csv')
-        with col_ex2: st.download_button("📥 Excel Export", data=excel_data, file_name='daten.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-        with col_ex3: st.download_button("📥 JSON Export", data=json_data, file_name='daten.json', mime='application/json')
+        with col_ex1: st.download_button(" CSV Export", data=csv_data, file_name='daten.csv', mime='text/csv')
+        with col_ex2: st.download_button(" Excel Export", data=excel_data, file_name='daten.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        with col_ex3: st.download_button(" JSON Export", data=json_data, file_name='daten.json', mime='application/json')
         with col_ex4:
             # Generator-Funktion für den Markdown-Report
             def generate_md_report(data):
@@ -164,7 +164,7 @@ if uploaded_file is not None:
                 md += "## 3. Duplikate\n"
                 md += f"Es wurden **{data.astype(str).duplicated().sum()}** doppelte Zeilen gefunden.\n"
                 return md
-            st.download_button("📄 Markdown Report", data=generate_md_report(final_selection_df).encode('utf-8'), file_name='report.md', mime='text/markdown')
+            st.download_button(" Markdown Report", data=generate_md_report(final_selection_df).encode('utf-8'), file_name='report.md', mime='text/markdown')
 
     # ------------------------------------------
     # TAB 2: AUSREISSER (Interquartilsabstand / IQR-Regel)
@@ -173,6 +173,8 @@ if uploaded_file is not None:
         st.subheader("Mathematische Ausreißer-Erkennung")
         if not numeric_df.empty:
             outlier_report = []
+            outlier_data_dict = {} # Speichert die echten Ausreißer-Zeilen ab
+            
             for col in numeric_df.columns:
                 # Berechne Q1 (25%), Q3 (75%) und den IQR, um logische Ober- und Untergrenzen zu setzen
                 Q1 = numeric_df[col].quantile(0.25)
@@ -183,21 +185,44 @@ if uploaded_file is not None:
                 # Finde alle Zeilen, die außerhalb dieser Grenzen liegen
                 outliers = filtered_df[(filtered_df[col] < lower) | (filtered_df[col] > upper)]
                 outlier_report.append({"Spalte": col, "Q1": Q1, "Q3": Q3, "IQR": IQR, "Unten": lower, "Oben": upper, "Anzahl": len(outliers)})
+                
+                # Wenn es Ausreißer gibt, packen wir sie in unser "Wörterbuch" für die Detailansicht
+                if len(outliers) > 0:
+                    outlier_data_dict[col] = outliers
             
-            # Zeige die Tabelle sauber formatiert (2 Nachkommastellen) an
+            # Zeige die Übersichtstabelle sauber formatiert (2 Nachkommastellen) an
             st.dataframe(pd.DataFrame(outlier_report).style.format(precision=2), use_container_width=True)
+            
+            # Die elegante Detailansicht
+            if outlier_data_dict:
+                st.markdown("---")
+                st.subheader(" Detailansicht: Die echten Datensätze")
+                
+                # Dropdown-Menü, das nur Spalten mit Ausreißern anzeigt
+                selected_outlier_col = st.selectbox(
+                    "Wähle eine Spalte, um die exakten Ausreißer-Zeilen zu analysieren:", 
+                    list(outlier_data_dict.keys())
+                )
+                
+                if selected_outlier_col:
+                    st.write(f"Zeige {len(outlier_data_dict[selected_outlier_col])} gefundene Ausreißer in der Spalte **'{selected_outlier_col}'**:")
+                    # Zeigt die tatsächlichen Zeilen aus dem Original-Datensatz
+                    st.dataframe(outlier_data_dict[selected_outlier_col], use_container_width=True)
+            else:
+                st.success("Perfekt! Es wurden keine Ausreißer in den aktuellen Daten gefunden.")
+                
         else:
             st.warning("Keine numerischen Spalten vorhanden.")
 
-    # ------------------------------------------
+   
     # TAB 3: KORRELATION & SMART ENCODE
-    # ------------------------------------------
+    
     with tab3:
         st.subheader("Zusammenhänge visualisieren")
         corr_df = numeric_df.copy()
         
         # Option: Wandelt Text-Spalten mit nur 2 Werten (z.B. yes/no) in 1 und 0 um, damit sie in der Matrix auftauchen
-        smart_encode = st.checkbox("🤖 Smart Encode (Binäre Text-Spalten intelligent in 1/0 umwandeln)")
+        smart_encode = st.checkbox(" Smart Encode (Binäre Text-Spalten intelligent in 1/0 umwandeln)")
         
         if smart_encode:
             cat_cols = filtered_df.select_dtypes(include=['object', 'category']).columns
@@ -240,17 +265,17 @@ if uploaded_file is not None:
         else:
             st.warning("Mindestens zwei numerische (oder codierte) Spalten benötigt.")
 
-    # ------------------------------------------
+    
     # TAB 4: DATEN-QUALITÄT (Prüf-Bausteine)
-    # ------------------------------------------
+   
     with tab4:
-        st.subheader("🛡️ Berechnungsbausteine & Qualitäts-Checks")
+        st.subheader(" Berechnungsbausteine & Qualitäts-Checks")
         
         col1, col2, col3 = st.columns(3)
         
         # Check 1: Min, Max, Mean, Std (Standardstatistik)
         with col1:
-            if st.button("📊 Deskriptive Statistik"):
+            if st.button(" Deskriptive Statistik"):
                 if not numeric_df.empty:
                     st.write("**Statistische Kennzahlen:**")
                     st.dataframe(numeric_df.describe(), use_container_width=True)
@@ -259,7 +284,7 @@ if uploaded_file is not None:
                     
         # Check 2: Fehlende Werte & Heatmap
         with col2:
-            if st.button("❓ Missing-Value-Report"):
+            if st.button(" Missing-Value-Report"):
                 missing = filtered_df.isnull().sum()
                 if missing.sum() > 0:
                     st.dataframe(missing[missing > 0].rename("Anzahl fehlend"))
@@ -296,7 +321,7 @@ if uploaded_file is not None:
         
         # Check 4: Die häufigsten Kategorien anzeigen
         with col4:
-            if st.button("🔠 Value Counts"):
+            if st.button("Value Counts"):
                 cat_cols = filtered_df.select_dtypes(include=['object', 'category']).columns
                 if len(cat_cols) > 0:
                     for col in cat_cols:
@@ -308,7 +333,7 @@ if uploaded_file is not None:
         # Check 5: Quasi-konstante Spalten (Spalten, die keinen Informationswert bieten, da fast alles gleich ist)
         with col5:
             variance_threshold = st.slider("Schwellenwert (%) für konstante Werte", min_value=50, max_value=100, value=95)
-            if st.button("🚨 Konstante Spalten (Variance Check)"):
+            if st.button("Konstante Spalten (Variance Check)"):
                 quasi_constant_cols = []
                 total_rows = len(filtered_df)
                 if total_rows > 0:
@@ -326,7 +351,7 @@ if uploaded_file is not None:
 
         # Check 6: Typkonflikte (Findet Spalten, die als Text markiert sind, aber heimlich Zahlen enthalten)
         with col6:
-            if st.button("🕵️‍♂️ Typkonflikte"):
+            if st.button("Typenkonflikte"):
                 conflicts = []
                 for col in filtered_df.columns:
                     if pd.api.types.is_object_dtype(filtered_df[col]):
@@ -338,9 +363,9 @@ if uploaded_file is not None:
                             if num_test.notna().sum() / len(valid_vals) > 0.8:
                                 conflicts.append(col)
                 
-                if conflicts: st.warning(f"🚨 Typkonflikt (Text enthält heimlich Zahlen):\n**{', '.join(conflicts)}**")
+                if conflicts: st.warning(f" Typkonflikt (Text enthält heimlich Zahlen):\n**{', '.join(conflicts)}**")
                 else: st.success("Sauber! Keine Zahlen als Text getarnt.")
 
 # Fallback, wenn noch keine Datei hochgeladen wurde
 else:
-    st.info("👈 Bitte lade zuerst eine Datei hoch.")
+    st.info(" Bitte lade zuerst eine Datei hoch.")
